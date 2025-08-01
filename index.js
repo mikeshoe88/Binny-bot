@@ -43,11 +43,11 @@ async function runBinnyStartWorkflow(channelId, client) {
 
   await client.chat.postMessage({
     channel: channelId,
-    text: `📦 Please fill out the *Contents Initial Form* for *${jobNumber}*:
-<${formLink}|Contents Initial Form>`
+    text: `📦 Please fill out the *Contents Initial Form* for *${jobNumber}*:\n<${formLink}|Contents Initial Form>`
   });
 }
 
+// Auto-trigger when Binny joins a new deal channel
 app.event('member_joined_channel', async ({ event, client }) => {
   if (event.user === 'USLACKBOT') return;
 
@@ -66,14 +66,17 @@ app.event('member_joined_channel', async ({ event, client }) => {
   }
 });
 
+// Manual /start command
 app.command('/start', async ({ command, ack, client }) => {
   await ack();
   await runBinnyStartWorkflow(command.channel_id, client);
 });
 
+// EXPRESS SETUP
 const expressApp = expressReceiver.app;
 expressApp.use(express.json());
 
+// Trigger progress form from Apps Script
 expressApp.post('/trigger-progress-form', async (req, res) => {
   const jobNumber = req.body?.jobNumber;
   if (!jobNumber || !jobNumber.toLowerCase().includes('deal')) {
@@ -85,8 +88,7 @@ expressApp.post('/trigger-progress-form', async (req, res) => {
   try {
     await app.client.chat.postMessage({
       channel,
-      text: `📋 Please complete the *Contents Progress Form* for *${jobNumber}*:
-<${formLink}|Progress Form>`
+      text: `📋 Please complete the *Contents Progress Form* for *${jobNumber}*:\n<${formLink}|Progress Form>`
     });
     console.log(`✅ Progress form posted to ${channel}`);
     res.status(200).send('Posted');
@@ -96,8 +98,34 @@ expressApp.post('/trigger-progress-form', async (req, res) => {
   }
 });
 
+// NEW: Final Slack message for packing complete
+expressApp.post('/slack-final-message', async (req, res) => {
+  const { jobNumber, message } = req.body;
+
+  if (!jobNumber || !message) {
+    return res.status(400).send('Missing jobNumber or message');
+  }
+
+  const channel = jobNumber.toLowerCase(); // e.g., "danica-deal107"
+
+  try {
+    await app.client.chat.postMessage({
+      channel,
+      text: `✅ ${message}`
+    });
+
+    console.log(`✅ Final Slack message posted to ${channel}`);
+    return res.status(200).send('Message sent to Slack');
+  } catch (err) {
+    console.error(`❌ Failed to post final Slack message to ${channel}:`, err);
+    return res.status(500).send('Slack message failed');
+  }
+});
+
+// Alive ping
 expressApp.get('/', (req, res) => res.send('Binny is alive!'));
 
+// Start server
 (async () => {
   const port = process.env.PORT || 3000;
   await app.start(port);
