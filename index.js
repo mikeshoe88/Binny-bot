@@ -26,6 +26,8 @@ const ALWAYS_INVITE_USER_IDS = [
   'U07AB7A4UNS', // Anastacio
   'U086RFE5UF2', // Jennifer
   'U05FPCPHJG6', // Mike
+  'U05FYG3EMHS', // kim
+  'U06DKJ1BJ9W', // Danica
 ];
 
 // PD custom field key for Estimator
